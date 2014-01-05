@@ -50,13 +50,36 @@ class HockeyAppConfig
   end
 
   def configure!
-    return if @profile == :local
+    version_bump!
 
-    @configured ||= begin
-      @config.vendor_project('vendor/HockeySDK/HockeySDK.framework', :static, products: ['HockeySDK'], headers_dir: 'Headers')
-      @config.resources_dirs += [ './vendor/HockeySDK/Resources' ]
-      @config.frameworks += [ 'HockeySDK' ]
-      true
+    unless @profile == :local
+      @configured ||= begin
+        @config.vendor_project('vendor/HockeySDK/HockeySDK.framework', :static, products: ['HockeySDK'], headers_dir: 'Headers')
+        @config.resources_dirs += [ './vendor/HockeySDK/Resources' ]
+        @config.frameworks += [ 'HockeySDK' ]
+
+        true
+      end
+    end
+  end
+
+  def version_bump!
+    version_file = File.join('.hockeyapp_version')
+    minor_version = if File.exists?(version_file)
+                      File.read(version_file).to_i
+                    else
+                      0
+                    end
+
+    unless @profile == :local
+      minor_version += 1
+    end
+
+    @config.version = "#{@config.hockeyapp_version_base}.#{minor_version}"
+    App.info "HockeyApp", "Version Bumped -> #{@config.version}"
+
+    File.open(version_file, 'w') do |f|
+      f.write minor_version
     end
   end
 
@@ -65,6 +88,7 @@ end
 module Motion; module Project; class Config
 
   attr_accessor :hockeyapp_mode
+  attr_accessor :hockeyapp_version_base
 
   variable :hockeyapp
 
