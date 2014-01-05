@@ -36,8 +36,13 @@ class HockeyAppConfig
     send("#{var}=", val)
   end
 
-  def initialize(config)
+  def initialize(config, profile)
     @config = config
+    @profile = profile
+  end
+
+  def config(&block)
+    @config.instance_eval(&block)
   end
 
   def inspect
@@ -45,6 +50,8 @@ class HockeyAppConfig
   end
 
   def configure!
+    return if @profile == :local
+
     @configured ||= begin
       @config.vendor_project('vendor/HockeySDK/HockeySDK.framework', :static, products: ['HockeySDK'], headers_dir: 'Headers')
       @config.resources_dirs += [ './vendor/HockeySDK/Resources' ]
@@ -61,15 +68,18 @@ module Motion; module Project; class Config
 
   variable :hockeyapp
 
-  def hockeyapp(&block)
-    @hockeyapp ||= HockeyAppConfig.new(self)
-    @hockeyapp.instance_eval(&block) unless block.nil?
-    @hockeyapp.configure!
-    @hockeyapp
-  end
+  def hockeyapp(profile=nil, &block)
+    return @hockeyapp unless @hockeyapp.nil?
 
-  def hockeyapp?
-    @hockeyapp_mode == true
+    @hockeyapp_mode ||= :local
+
+    if hockeyapp_mode.to_sym == profile.to_sym
+      @hockeyapp = HockeyAppConfig.new(self, profile)
+      @hockeyapp.instance_eval(&block) unless block.nil?
+      @hockeyapp.configure!
+    end
+
+    @hockeyapp
   end
 
 end; end; end
@@ -82,7 +92,13 @@ namespace 'hockeyapp' do
   desc "Submit an archive to HockeyApp"
   task :submit do
 
-    App.config_without_setup.hockeyapp_mode = true
+    mode = ENV["profile"]
+    mode.to_sym if mode
+    mode ||= :beta
+
+    App.fail "Cannot deploy a local profile" if mode == :local
+
+    App.config_without_setup.hockeyapp_mode = mode
 
     # Retrieve configuration settings.
     prefs = App.config.hockeyapp
@@ -123,7 +139,7 @@ namespace 'hockeyapp' do
 
   desc "Records if the device build is created in hockeyapp mode, so some things can be cleaned up between mode switches"
   task :record_mode do
-    hockeyapp_mode = App.config_without_setup.hockeyapp_mode ? "True" : "False"
+    hockeyapp_mode = App.config_without_setup.hockeyapp_mode || :local
 
     platform = 'iPhoneOS'
     bundle_path = App.config.app_bundle(platform)
@@ -131,9 +147,9 @@ namespace 'hockeyapp' do
     FileUtils.mkdir_p(build_dir)
     previous_hockeyapp_mode_file = File.join(build_dir, '.hockeyapp_mode')
 
-    previous_hockeyapp_mode = "False"
+    previous_hockeyapp_mode = :local
     if File.exist?(previous_hockeyapp_mode_file)
-      previous_hockeyapp_mode = File.read(previous_hockeyapp_mode_file).strip
+      previous_hockeyapp_mode = File.read(previous_hockeyapp_mode_file).strip.to_sym
     end
     if previous_hockeyapp_mode != hockeyapp_mode
       App.info "HockeyApp", "Cleaning executable, Info.plist, and PkgInfo for mode change (was: #{previous_hockeyapp_mode}, now: #{hockeyapp_mode})"
