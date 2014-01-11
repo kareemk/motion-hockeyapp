@@ -73,10 +73,10 @@ class HockeyAppConfig
 
     unless @profile == :local
       minor_version += 1
+      App.info "HockeyApp", "Version Bumped -> #{minor_version}"
     end
 
     @config.version = "#{@config.hockeyapp_version_base}.#{minor_version}"
-    App.info "HockeyApp", "Version Bumped -> #{@config.version}"
 
     File.open(version_file, 'w') do |f|
       f.write minor_version
