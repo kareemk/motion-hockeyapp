@@ -28,7 +28,7 @@ end
 
 class HockeyAppConfig
   
-  attr_accessor :api_token, :beta_id, :live_id, :status, :notify, :notes_type
+  attr_accessor :api_token, :beta_id, :live_id, :status, :notify, :notes_type, :mandatory
 
   def set(var, val)
     @config.info_plist['HockeySDK'] ||= [{}]
@@ -46,7 +46,7 @@ class HockeyAppConfig
   end
 
   def inspect
-    {:api_token => api_token, :beta_id => beta_id, :live_id => live_id, :status => status, :notify => notify, :notes_type => notes_type}.inspect
+    {:api_token => api_token, :beta_id => beta_id, :live_id => live_id, :status => status, :notify => notify, :notes_type => notes_type, :mandatory => mandatory}.inspect
   end
 
   def configure!
@@ -144,13 +144,15 @@ namespace 'hockeyapp' do
 
     prefs.status ||= "2"
     prefs.notify ||= "0"
+    prefs.mandatory ||= "0"
     prefs.notes_type ||= "1"
 
-    cmd = %Q{/usr/bin/curl "https://rink.hockeyapp.net/api/2/apps" -F status="$status" -F notify="$notify" -F notes="$notes" -F notes_type="$notes_type" -F ipa="$ipa" -F dsym="$dsym" -H "$header"}
+    cmd = %Q{/usr/bin/curl "https://rink.hockeyapp.net/api/2/apps" -F status="$status" -F mandatory="$mandatory" -F notify="$notify" -F notes="$notes" -F notes_type="$notes_type" -F ipa="$ipa" -F dsym="$dsym" -H "$header"}
 
     env = {
       "notes" => ENV['notes'].to_s,
       "status" => prefs.status.to_s,
+      "mandatory" => prefs.mandatory.to_s,
       "notify" => prefs.notify.to_s,
       "notes_type" => prefs.notes_type.to_s,
       "ipa" => "@#{App.config.archive}",
