@@ -7,15 +7,15 @@ and be submitted to the HockeyApp platform.
 
   gem 'motion-hockeyapp'
 
-  unzip the HockeySDK into vendor so you end up with exactly the following directory structure:
-  
-  vendor/HockeySDK/HockeySDK.framework
-  vendor/HockeySDK/Resources
-
 
 == Setup
 
     Motion::Project::App.setup do |app|
+      app.pods do
+        # ...
+        pod 'HockeySDK'
+        # ...
+      end
       # ...
       # app.development do
       #   app.identifier = 'com.your.App.dev'

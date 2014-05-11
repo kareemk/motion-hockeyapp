@@ -51,16 +51,6 @@ class HockeyAppConfig
 
   def configure!
     version_bump!
-
-    unless @profile == :local
-      @configured ||= begin
-        @config.vendor_project('vendor/HockeySDK/HockeySDK.framework', :static, products: ['HockeySDK'], headers_dir: 'Headers')
-        @config.resources_dirs += [ './vendor/HockeySDK/Resources' ]
-        @config.frameworks += [ 'HockeySDK' ]
-
-        true
-      end
-    end
   end
 
   def version_bump!

@@ -25,6 +25,6 @@ class BITHockeyManagerLauncher
   private
 
   def hockeyapp_enabled?
-    Object.const_defined?('BITHockeyManager') && !UIDevice.currentDevice.model.include?('Simulator')
+    Object.const_defined?('BITHockeyManager') && !UIDevice.currentDevice.model.include?('Simulator') && BITHockeyManager.sharedHockeyManager.authenticator
   end
 end
