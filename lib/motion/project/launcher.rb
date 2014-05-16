@@ -3,7 +3,7 @@ class BITHockeyManagerLauncher
   BITCrashManagerStatusDisabled = 0
   BITCrashManagerStatusAlwaysAsk = 1
   BITCrashManagerStatusAutoSend = 2
-  
+
   def start(&block)
     return unless hockeyapp_enabled?
     (@plist = NSBundle.mainBundle.objectForInfoDictionaryKey('HockeySDK')) && (@plist = @plist.first)
@@ -25,6 +25,6 @@ class BITHockeyManagerLauncher
   private
 
   def hockeyapp_enabled?
-    Object.const_defined?('BITHockeyManager') && !UIDevice.currentDevice.model.include?('Simulator') && BITHockeyManager.sharedHockeyManager.authenticator
+    Object.const_defined?('BITHockeyManager') && !UIDevice.currentDevice.model.include?('Simulator')
   end
 end
