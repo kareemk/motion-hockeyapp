@@ -7,7 +7,6 @@ and be submitted to the HockeyApp platform.
 
   gem 'motion-hockeyapp'
 
-
 == Setup
 
     Motion::Project::App.setup do |app|

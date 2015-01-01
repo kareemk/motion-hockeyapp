@@ -81,33 +81,50 @@ class HockeyAppConfig
       f.write minor_version
     end
   end
-
 end
 
-module Motion; module Project; class Config
+module Motion
+  module Project
+    class Config
 
-  attr_accessor :hockeyapp_mode
-  attr_accessor :hockeyapp_version_base
+      attr_accessor :hockeyapp_mode
+      attr_accessor :hockeyapp_version_base
 
-  variable :hockeyapp
+      variable :hockeyapp
 
-  def hockeyapp(profile=nil, &block)
-    return @hockeyapp unless @hockeyapp.nil?
+      def hockeyapp(profile=nil, &block)
+        return @hockeyapp unless @hockeyapp.nil?
 
-    @hockeyapp_mode ||= :local
+        @hockeyapp_mode ||= :local
 
-    if hockeyapp_mode.to_sym == profile.to_sym
-      @hockeyapp = HockeyAppConfig.new(self, profile)
-      @hockeyapp.instance_eval(&block) unless block.nil?
-      @hockeyapp.configure!
+        if hockeyapp_mode.to_sym == profile.to_sym
+          @hockeyapp = HockeyAppConfig.new(self, profile)
+          @hockeyapp.instance_eval(&block) unless block.nil?
+          @hockeyapp.configure!
+        end
+
+        @hockeyapp
+      end
     end
-
-    @hockeyapp
   end
-
-end; end; end
+end
 
 Motion::Project::App.setup do |app|
+
+  app.pods do
+    if app.deploy_platform == 'MacOSX'
+      pod 'HockeySDK-Mac', '~> 2.1'
+    else
+      pod "HockeySDK", "~> 3.6.1"
+    end
+  end
+
+  Dir.glob(File.join(File.dirname(__FILE__), '**/*.rb')).each do |file|
+    if app.respond_to?("exclude_from_detect_dependencies")
+      app.exclude_from_detect_dependencies << file
+    end
+  end
+
   app.files.push(File.join(File.dirname(__FILE__), "launcher.rb"))
 end
 
@@ -128,10 +145,15 @@ namespace 'hockeyapp' do
 
     App.fail "A value for app.hockeyapp.api_token is mandatory" unless prefs.api_token
 
-    Rake::Task["archive"].invoke
+    Rake::Task[App.config_mode == :release ? "archive:distribution" : "archive"].invoke
+    platform = App.config.deploy_platform
 
     # An archived version of the .dSYM bundle is needed.
-    app_dsym = App.config.app_bundle('iPhoneOS').sub(/\.app$/, '.dSYM')
+    app_dsym = if App.config.respond_to?(:app_bundle_dsym)
+      App.config.app_bundle_dsym(platform)
+    else
+      App.config.app_bundle(platform).sub(/\.app$/, '.dSYM')
+    end
     app_dsym_zip = app_dsym + '.zip'
     if !File.exist?(app_dsym_zip) or File.mtime(app_dsym) > File.mtime(app_dsym_zip)
       Dir.chdir(File.dirname(app_dsym)) do
@@ -166,7 +188,7 @@ namespace 'hockeyapp' do
   task :record_mode do
     hockeyapp_mode = App.config_without_setup.hockeyapp_mode || :local
 
-    platform = 'iPhoneOS'
+    platform = App.config.deploy_platform
     bundle_path = App.config.app_bundle(platform)
     build_dir = File.join(App.config.versionized_build_dir(platform))
     FileUtils.mkdir_p(build_dir)
