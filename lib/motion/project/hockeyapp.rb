@@ -110,21 +110,6 @@ module Motion
 end
 
 Motion::Project::App.setup do |app|
-
-  app.pods do
-    if app.deploy_platform == 'MacOSX'
-      pod 'HockeySDK-Mac', '~> 2.1'
-    else
-      pod "HockeySDK", "~> 3.6.1"
-    end
-  end
-
-  Dir.glob(File.join(File.dirname(__FILE__), '**/*.rb')).each do |file|
-    if app.respond_to?("exclude_from_detect_dependencies")
-      app.exclude_from_detect_dependencies << file
-    end
-  end
-
   app.files.push(File.join(File.dirname(__FILE__), "launcher.rb"))
 end
 
