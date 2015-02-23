@@ -49,8 +49,8 @@ class HockeyAppConfig
     {:api_token => api_token, :beta_id => beta_id, :live_id => live_id, :status => status, :notify => notify, :notes_type => notes_type, :mandatory => mandatory}.inspect
   end
 
-  def configure!
-    version_bump!
+  def configure!(bump_version)
+    version_bump! if bump_version
 
     unless @profile == :local
       @configured ||= begin
@@ -89,6 +89,7 @@ module Motion
 
       attr_accessor :hockeyapp_mode
       attr_accessor :hockeyapp_version_base
+      attr_accessor :hockeyapp_bump_version
 
       variable :hockeyapp
 
@@ -100,7 +101,7 @@ module Motion
         if hockeyapp_mode.to_sym == profile.to_sym
           @hockeyapp = HockeyAppConfig.new(self, profile)
           @hockeyapp.instance_eval(&block) unless block.nil?
-          @hockeyapp.configure!
+          @hockeyapp.configure!(hockeyapp_bump_version)
         end
 
         @hockeyapp
@@ -114,9 +115,8 @@ Motion::Project::App.setup do |app|
 end
 
 namespace 'hockeyapp' do
-  desc "Submit an archive to HockeyApp"
-  task :submit do
-
+  desc "Create an archive based on the profile"
+  task :archive do
     mode = ENV["profile"]
     mode.to_sym if mode
     mode ||= :beta
@@ -124,6 +124,26 @@ namespace 'hockeyapp' do
     App.fail "Cannot deploy a local profile" if mode == :local
 
     App.config_without_setup.hockeyapp_mode = mode
+    App.config_without_setup.hockeyapp_bump_version = false
+
+    # Retrieve configuration settings.
+    prefs = App.config.hockeyapp
+
+    App.fail "A value for app.hockeyapp.api_token is mandatory" unless prefs.api_token
+
+    Rake::Task[App.config_mode == :release ? "archive:distribution" : "archive"].invoke
+  end
+
+  desc "Submit an archive to HockeyApp"
+  task :submit do
+    mode = ENV["profile"]
+    mode.to_sym if mode
+    mode ||= :beta
+
+    App.fail "Cannot deploy a local profile" if mode == :local
+
+    App.config_without_setup.hockeyapp_mode = mode
+    App.config_without_setup.hockeyapp_bump_version = true
 
     # Retrieve configuration settings.
     prefs = App.config.hockeyapp
