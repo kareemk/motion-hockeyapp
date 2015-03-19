@@ -50,7 +50,7 @@ class HockeyAppConfig
   end
 
   def configure!(bump_version)
-    version_bump! if bump_version
+    set_version!(bump_version)
 
     unless @profile == :local
       @configured ||= begin
@@ -62,7 +62,7 @@ class HockeyAppConfig
     end
   end
 
-  def version_bump!
+  def set_version!(bump)
     version_file = File.join('.hockeyapp_version')
     minor_version = if File.exists?(version_file)
                       File.read(version_file).to_i
@@ -70,16 +70,17 @@ class HockeyAppConfig
                       0
                     end
 
-    unless @profile == :local
+    unless @profile == :local || !bump
       minor_version += 1
+
+      File.open(version_file, 'w') do |f|
+        f.write minor_version
+      end
+
       App.info "HockeyApp", "Version Bumped -> #{minor_version}"
     end
 
     @config.version = "#{@config.hockeyapp_version_base}.#{minor_version}"
-
-    File.open(version_file, 'w') do |f|
-      f.write minor_version
-    end
   end
 end
 
