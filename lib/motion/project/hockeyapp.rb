@@ -67,10 +67,10 @@ class HockeyAppConfig
     minor_version = if File.exists?(version_file)
                       File.read(version_file).to_i
                     else
-                      0
+                      nil
                     end
 
-    unless @profile == :local || !bump
+    unless minor_version.nil? || @profile == :local || !bump
       minor_version += 1
 
       File.open(version_file, 'w') do |f|
@@ -80,7 +80,7 @@ class HockeyAppConfig
       App.info "HockeyApp", "Version Bumped -> #{minor_version}"
     end
 
-    @config.version = "#{@config.hockeyapp_version_base}.#{minor_version}"
+    @config.version = ["#{@config.hockeyapp_version_base}", minor_version].compact.join('.')
   end
 end
 
@@ -132,7 +132,25 @@ namespace 'hockeyapp' do
 
     App.fail "A value for app.hockeyapp.api_token is mandatory" unless prefs.api_token
 
-    Rake::Task[App.config_mode == :release ? "archive:distribution" : "archive"].invoke
+    Rake::Task["archive"].invoke
+  end
+
+  task :release do
+    mode = ENV["profile"]
+    mode.to_sym if mode
+    mode ||= :beta
+
+    App.fail "Cannot deploy a local profile" if mode == :local
+
+    App.config_without_setup.hockeyapp_mode = mode
+    App.config_without_setup.hockeyapp_bump_version = false
+
+    # Retrieve configuration settings.
+    prefs = App.config.hockeyapp
+
+    App.fail "A value for app.hockeyapp.api_token is mandatory" unless prefs.api_token
+
+    Rake::Task["archive:distribution"].invoke
   end
 
   desc "Submit an archive to HockeyApp"
